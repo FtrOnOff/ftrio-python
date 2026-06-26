@@ -1,0 +1,79 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ftrio"
+version = "1.0.0"
+description = "Feature toggles for Python, decorate a function with @toggle and it becomes gated by its own name"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "FtrIO contributors" }]
+keywords = ["feature-flags", "feature-toggles", "ab-testing", "rollout"]
+classifiers = [
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries",
+]
+# The core package depends on the standard library only.
+dependencies = []
+
+# Links rendered in the sidebar of the PyPI project page.
+[project.urls]
+Homepage = "https://github.com/FtrOnOff/ftrio-python"
+Repository = "https://github.com/FtrOnOff/ftrio-python"
+Changelog = "https://github.com/FtrOnOff/ftrio-python/blob/main/CHANGELOG.md"
+Issues = "https://github.com/FtrOnOff/ftrio-python/issues"
+
+[project.optional-dependencies]
+azure = ["azure-appconfiguration>=1.1"]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.4",
+    "mypy>=1.8",
+]
+
+[project.scripts]
+ftrio = "ftrio.cli:main"
+
+[tool.setuptools.packages.find]
+# Only the importable library ships. The playground demo and the test suite are
+# development-only and are explicitly excluded from the built distribution, so
+# `import playground` is never possible from an installed package.
+include = ["ftrio*"]
+exclude = ["playground*", "tests*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+# Verbose, descriptive names are a project requirement; do not let the linter
+# push toward terse identifiers. "N" (pep8-naming) is enabled so snake_case for
+# functions/methods is enforced across the codebase, including the playground and
+# the @toggle-decorated test fixtures (whose names are the toggle keys).
+select = ["E", "F", "W", "I", "UP", "B", "N"]
+ignore = [
+    "E501",  # line length is handled by formatter; long descriptive names are intentional
+]
+
+[tool.ruff.lint.per-file-ignores]
+# The fake HTTP test server overrides http.server's do_GET, whose name is fixed
+# by the standard library API and cannot be snake_case.
+"tests/unit/test_providers.py" = ["N802"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_unused_ignores = false
+ignore_missing_imports = true
+disallow_untyped_defs = false
+files = ["ftrio"]
