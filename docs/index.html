@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FtrIO — Python Feature Toggles</title>
+  <meta name="description" content="FtrIO for Python — gate function execution via appsettings.json. Decorate with @toggle, no if statements, standard-library core." />
+  <link rel="icon" type="image/png" href="assets/ftrio-icon-128.png" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #ff69b4;
+      --accent-dim: rgba(255, 105, 180, 0.15);
+      --code-bg: #1f2937;
+      --radius: 8px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.6;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* NAV */
+    nav {
+      position: sticky;
+      top: 0;
+      background: rgba(13,17,23,0.92);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+      z-index: 100;
+    }
+    .nav-logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.1rem; color: var(--text); }
+    .nav-logo img { height: 28px; }
+    .nav-logo .lang-tag {
+      font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em;
+      background: var(--accent-dim); border: 1px solid var(--accent); color: var(--accent);
+      border-radius: 20px; padding: 0.05rem 0.55rem;
+    }
+    .nav-links { display: flex; gap: 1.5rem; font-size: 0.9rem; color: var(--muted); align-items: center; }
+    .nav-links a { color: var(--muted); }
+    .nav-links a:hover { color: var(--text); }
+    .nav-links a.lang-switch { color: var(--accent); border: 1px solid var(--accent); border-radius: 20px; padding: 0.15rem 0.7rem; }
+    .nav-links a.lang-switch:hover { background: var(--accent-dim); text-decoration: none; }
+
+    /* HERO */
+    .hero {
+      text-align: center;
+      padding: 5rem 2rem 4rem;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+    .hero img.banner {
+      width: 100%;
+      max-width: 480px;
+      margin-bottom: 2rem;
+    }
+    .hero h1 {
+      font-size: 2.8rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, #e6edf3 30%, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--muted);
+      max-width: 520px;
+      margin: 0 auto 2rem;
+    }
+    .hero-badges { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; margin-bottom: 2.5rem; }
+    .hero-ctas { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.6rem 1.3rem;
+      border-radius: var(--radius);
+      font-size: 0.95rem;
+      font-weight: 600;
+      transition: opacity .15s;
+    }
+    .btn:hover { opacity: 0.85; text-decoration: none; }
+    .btn-primary { background: var(--accent); color: #0d1117; }
+    .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+
+    /* INSTALL */
+    .install-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.9rem 1.2rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 1rem;
+      margin: 0 auto 2.5rem;
+    }
+    .install-block code {
+      font-family: "SF Mono", "Fira Code", Consolas, monospace;
+      font-size: 0.95rem;
+      color: var(--accent);
+    }
+    .copy-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      color: var(--muted);
+      font-size: 0.75rem;
+      padding: 0.2rem 0.55rem;
+      cursor: pointer;
+      transition: color .15s, border-color .15s;
+    }
+    .copy-btn:hover { color: var(--text); border-color: var(--text); }
+
+    /* MAIN LAYOUT */
+    main { max-width: 900px; margin: 0 auto; padding: 0 2rem 6rem; }
+
+    /* SECTIONS */
+    section { margin-bottom: 4rem; }
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 1.25rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    h2 .icon { font-size: 1.2rem; }
+    h3 { font-size: 1.05rem; font-weight: 600; margin: 1.5rem 0 0.6rem; color: var(--text); }
+
+    p { color: var(--muted); margin-bottom: 0.9rem; }
+    p strong { color: var(--text); }
+    ol, ul { color: var(--muted); margin: 0 0 0.9rem 1.4rem; }
+    li { margin-bottom: 0.4rem; }
+
+    /* CODE */
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.1rem 1.3rem;
+      overflow-x: auto;
+      margin-bottom: 1rem;
+    }
+    pre code {
+      font-family: "SF Mono", "Fira Code", Consolas, monospace;
+      font-size: 0.88rem;
+      line-height: 1.7;
+      color: var(--text);
+    }
+    code { font-family: "SF Mono", "Fira Code", Consolas, monospace; }
+    p code, li code, td code {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.1em 0.4em;
+      font-size: 0.85em;
+      color: var(--accent);
+    }
+
+    /* FEATURE GRID */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.35rem;
+      transition: border-color .2s;
+    }
+    .feature-card:hover { border-color: var(--accent); }
+    .feature-card .emoji { font-size: 1.5rem; margin-bottom: 0.5rem; display: block; }
+    .feature-card h3 { margin: 0 0 0.4rem; font-size: 0.95rem; color: var(--text); }
+    .feature-card p { font-size: 0.875rem; margin: 0; }
+
+    /* TABLE */
+    table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; font-size: 0.9rem; }
+    th {
+      text-align: left;
+      padding: 0.6rem 1rem;
+      background: var(--surface);
+      color: var(--muted);
+      font-weight: 600;
+      border-bottom: 1px solid var(--border);
+    }
+    td { padding: 0.65rem 1rem; border-bottom: 1px solid var(--border); color: var(--muted); vertical-align: top; }
+    td code { color: var(--accent); }
+    td:first-child { color: var(--text); font-weight: 500; }
+    tr:last-child td { border-bottom: none; }
+
+    /* PY BADGES */
+    .tfm-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+    .tfm-badge {
+      background: var(--accent-dim);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      border-radius: 20px;
+      padding: 0.2rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    /* NOTE */
+    .note {
+      background: var(--accent-dim);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      padding: 0.85rem 1.1rem;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    .note strong { color: var(--text); }
+
+    /* FOOTER */
+    footer {
+      text-align: center;
+      padding: 2.5rem 1rem;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    footer a { color: var(--muted); }
+    footer a:hover { color: var(--text); }
+
+    /* Syntax highlight helpers */
+    .kw  { color: #ff79c6; }
+    .cm  { color: #6272a4; font-style: italic; }
+    .st  { color: #f1fa8c; }
+    .at  { color: #50fa7b; }
+    .ty  { color: #8be9fd; }
+    .nm  { color: #e6edf3; }
+    .pu  { color: #e6edf3; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-logo">
+    <img src="assets/ftrio-icon-128.png" alt="FtrIO" />
+    FtrIO <span class="lang-tag">Python</span>
+  </span>
+  <div class="nav-links">
+    <a href="#quickstart">Quickstart</a>
+    <a href="#builder">Builder</a>
+    <a href="#strategies">Strategies</a>
+    <a href="#providers">Providers</a>
+    <a href="#lint">Lint CLI</a>
+    <a href="#config">Config</a>
+    <a href="https://github.com/FtrOnOff/ftrio-python">GitHub</a>
+    <a href="https://pypi.org/project/ftrio/">PyPI</a>
+    <a class="lang-switch" href="https://docs.ftrio.dev">.NET docs ↗</a>
+  </div>
+</nav>
+
+<div class="hero">
+  <img class="banner" src="assets/ftrio-banner.png" alt="FtrIO banner" />
+  <h1>Feature Toggles for Python</h1>
+  <p>Gate function execution via <code>appsettings.json</code> — one decorator, no <code>if</code> statements, standard-library core.</p>
+
+  <div class="hero-badges">
+    <a href="https://pypi.org/project/ftrio/">
+      <img src="https://img.shields.io/pypi/v/ftrio?color=ff69b4&logo=pypi&logoColor=white" alt="PyPI version" />
+    </a>
+    <a href="https://pypi.org/project/ftrio/">
+      <img src="https://img.shields.io/pypi/pyversions/ftrio?color=ff69b4" alt="Python versions" />
+    </a>
+    <img src="https://img.shields.io/badge/license-MIT-blue" alt="License" />
+  </div>
+
+  <div class="install-block">
+    <code>pip install ftrio</code>
+    <button class="copy-btn" onclick="copyInstall(this)">copy</button>
+  </div>
+
+  <div class="hero-ctas">
+    <a class="btn btn-primary" href="#quickstart">Get started</a>
+    <a class="btn btn-secondary" href="https://github.com/FtrOnOff/ftrio-python">View on GitHub</a>
+  </div>
+</div>
+
+<main>
+
+  <div class="note">
+    <strong>Ported from .NET.</strong> This is the Python port of
+    <a href="https://github.com/FtrOnOff/FtrIO">FtrIO for .NET</a>. The two share the same
+    <code>appsettings.json</code> wire format and toggle-value grammar, so they interoperate.
+    Looking for the C# library? See the <a href="https://docs.ftrio.dev">.NET docs</a>.
+  </div>
+
+  <!-- FEATURES -->
+  <section>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <span class="emoji">🎚️</span>
+        <h3>Zero call-site noise</h3>
+        <p>Decorate a function with <code>@toggle</code>; it runs only when its toggle is on. No <code>if</code>, no wrapper, no injected service.</p>
+      </div>
+      <div class="feature-card">
+        <span class="emoji">📦</span>
+        <h3>Standard-library core</h3>
+        <p>No third-party dependencies. The Azure App Config provider is the only optional extra.</p>
+      </div>
+      <div class="feature-card">
+        <span class="emoji">📄</span>
+        <h3>appsettings.json</h3>
+        <p>Same section names and value grammar as .NET, so config is cross-language and wire-compatible.</p>
+      </div>
+      <div class="feature-card">
+        <span class="emoji">🎲</span>
+        <h3>Strategy pipeline</h3>
+        <p>Percentage rollouts, A/B buckets, blue-green slots, user and attribute targeting, per-user overrides.</p>
+      </div>
+      <div class="feature-card">
+        <span class="emoji">🌐</span>
+        <h3>Fail-safe providers</h3>
+        <p>HTTP, env vars, and Azure App Config feed a buffer that flushes to disk — reads survive a provider going offline.</p>
+      </div>
+      <div class="feature-card">
+        <span class="emoji">🔍</span>
+        <h3><code>ftrio lint</code></h3>
+        <p>A CI gate that fails when a <code>@toggle</code> function has no matching key in <code>appsettings.json</code>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUICKSTART -->
+  <section id="quickstart">
+    <h2><span class="icon">🚀</span> Quickstart</h2>
+
+    <h3>1. Decorate a function</h3>
+    <p>The toggle key defaults to the function's own name.</p>
+    <pre><code><span class="kw">from</span> ftrio <span class="kw">import</span> toggle
+
+<span class="at">@toggle</span>
+<span class="kw">def</span> <span class="nm">send_welcome_email</span>(user):
+    ...  <span class="cm"># runs only when the "send_welcome_email" toggle is on</span></code></pre>
+
+    <h3>2. Add a matching key to <code>appsettings.json</code></h3>
+    <pre><code><span class="pu">{</span>
+    <span class="st">"Toggles"</span>: <span class="pu">{</span>
+        <span class="st">"send_welcome_email"</span>: <span class="kw">true</span>
+    <span class="pu">}</span>
+<span class="pu">}</span></code></pre>
+
+    <h3>3. Call it normally</h3>
+    <p>When the toggle is off, the call returns <code>None</code> without running the body.</p>
+    <pre><code><span class="nm">send_welcome_email</span>(user)  <span class="cm"># no-op (returns None) when the toggle is off</span></code></pre>
+
+    <div class="note">
+      <strong>No config file?</strong> If there is no <code>appsettings.json</code> on disk at all,
+      every toggle reads <strong>on</strong> — a fresh app stays fully functional before any config
+      exists. A present file missing a key raises <code>ToggleDoesNotExistError</code>; a present key
+      with an uninterpretable value raises <code>ToggleParsedOutOfRangeError</code>.
+    </div>
+
+    <h3>Async</h3>
+    <p>Use <code>@toggle_async</code> for coroutines. When the toggle is off it returns an awaitable that resolves to <code>None</code>, so <code>await</code> is always safe.</p>
+    <pre><code><span class="kw">from</span> ftrio <span class="kw">import</span> toggle_async
+
+<span class="at">@toggle_async</span>
+<span class="kw">async def</span> <span class="nm">sync_orders</span>():
+    ...
+
+<span class="kw">await</span> <span class="nm">sync_orders</span>()  <span class="cm"># resolves to None when off — always awaitable</span></code></pre>
+  </section>
+
+  <!-- BUILDER -->
+  <section id="builder">
+    <h2><span class="icon">🧱</span> The builder pipeline</h2>
+    <p>Plain <code>true</code>/<code>false</code> is the baseline. For richer decisions, build a parser
+    fluently and install it as the ambient parser the decorators use:</p>
+    <pre><code><span class="kw">from</span> ftrio <span class="kw">import</span> ToggleParserProvider
+
+<span class="ty">ToggleParserProvider</span>.<span class="nm">configure_builder</span>(<span class="kw">lambda</span> builder: builder
+    .<span class="nm">with_context_strategies</span>(context_accessor)  <span class="cm"># user targeting + attributes + A/B</span>
+    .<span class="nm">with_percentage_rollout</span>()                   <span class="cm"># "20%"</span>
+    .<span class="nm">with_blue_green</span>()                           <span class="cm"># "blue" / "green" from appsettings.json</span>
+    .<span class="nm">with_overrides</span>())                           <span class="cm"># per-user TogglesOverrides, checked first</span></code></pre>
+    <p>Strategies are tried in registration order; the first whose <code>can_handle</code> accepts the
+    raw value owns the decision. <code>BooleanStrategy</code> is always appended last, so plain
+    booleans keep working under any chain.</p>
+
+    <h3 id="strategies">Toggle-value grammar</h3>
+    <table>
+      <thead>
+        <tr><th>Value</th><th>Strategy</th><th>Meaning</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>true</code> / <code>false</code> / <code>1</code> / <code>0</code></td><td>Boolean</td><td>plain on/off</td></tr>
+        <tr><td><code>20%</code></td><td>PercentageRollout</td><td>on for ~20% of calls (random per call)</td></tr>
+        <tr><td><code>blue</code> / <code>green</code></td><td>BlueGreen</td><td>on when it names the active deployment slot</td></tr>
+        <tr><td><code>users:alice,bob</code></td><td>UserTargeting</td><td>on for the listed user ids</td></tr>
+        <tr><td><code>attribute:plan equals premium</code></td><td>AttributeRule</td><td>on when the rule matches the user's attribute</td></tr>
+        <tr><td><code>ab:50</code> / <code>ab:50:salt</code></td><td>ABTest</td><td>deterministic per-user 50% bucket</td></tr>
+      </tbody>
+    </table>
+    <p>A/B bucketing is stable and <strong>identical to the .NET implementation</strong> (SHA-256, first
+    four bytes as a little-endian signed int, absolute value modulo 100) — the same user buckets the
+    same way in both languages.</p>
+
+    <h3 id="overrides">Per-user overrides</h3>
+    <p><code>TogglesOverrides</code> win unconditionally, before any strategy runs — handy for QA,
+    support escalations, or dogfooding:</p>
+    <pre><code><span class="pu">{</span>
+    <span class="st">"Toggles"</span>: <span class="pu">{</span> <span class="st">"NewCheckout"</span>: <span class="st">"ab:50"</span> <span class="pu">}</span>,
+    <span class="st">"TogglesOverrides"</span>: <span class="pu">{</span> <span class="st">"NewCheckout"</span>: <span class="pu">{</span> <span class="st">"alice"</span>: <span class="kw">true</span> <span class="pu">}</span> <span class="pu">}</span>
+<span class="pu">}</span></code></pre>
+  </section>
+
+  <!-- PROVIDERS -->
+  <section id="providers">
+    <h2><span class="icon">🌐</span> Providers and the buffer model</h2>
+    <p>External sources feed a <code>ToggleProviderBuffer</code>, which flushes staged values to
+    <code>appsettings.json</code> atomically on an interval. The file stays the on-disk source of
+    truth, so reads survive a provider going offline (fail-safe).</p>
+    <pre><code><span class="kw">from</span> ftrio <span class="kw">import</span> ToggleProviderBuffer
+<span class="kw">from</span> ftrio.providers <span class="kw">import</span> HttpToggleParser
+
+buffer = <span class="ty">ToggleProviderBuffer</span>()
+<span class="ty">HttpToggleParser</span>(<span class="st">"https://flags.example.com/toggles"</span>, buffer)  <span class="cm"># polls, stages, flushes</span></code></pre>
+    <p>Available providers: <code>HttpToggleParser</code> (standard library),
+    <code>EnvironmentVariableToggleParser</code> (standalone or buffer mode), and
+    <code>AzureAppConfigToggleParser</code> (needs the <code>ftrio[azure]</code> extra). Each exposes
+    <code>close()</code> and context-manager support.</p>
+    <p><code>CompositeToggleParser</code> chains parsers with first-wins fallthrough — e.g. env-var
+    overrides, then a remote provider, then <code>appsettings.json</code> as the durable fallback.</p>
+  </section>
+
+  <!-- LINT -->
+  <section id="lint">
+    <h2><span class="icon">🔍</span> The <code>ftrio lint</code> CLI</h2>
+    <p>The .NET library ships a Roslyn analyzer (diagnostic <code>FTRIO001</code>) that fails the build
+    when a <code>[Toggle]</code> method has no matching key in <code>appsettings.json</code>. The Python
+    equivalent is a CLI you run in CI:</p>
+    <pre><code><span class="pu">$</span> ftrio lint path/to/project
+path/to/project/mod.py:8: FTRIO001: Function 'MissingOne' is decorated with @toggle but has no entry in the Toggles section of appsettings.json
+
+1 toggle(s) missing from appsettings.json.</code></pre>
+    <p>It walks the tree with <code>ast</code>, resolves each <code>@toggle</code> / <code>@toggle_async</code>
+    key, and exits non-zero on findings so it can gate a pipeline. Non-project directories
+    (<code>.venv</code>, <code>.git</code>, <code>build</code>, <code>dist</code>, <code>__pycache__</code>,
+    and the usual tool caches) are skipped by default.</p>
+    <pre><code><span class="pu">$</span> ftrio lint . --exclude tests --exclude <span class="st">"*_generated.py"</span>
+<span class="pu">$</span> ftrio lint . --exclude tests,scripts</code></pre>
+    <p>Use <code>--no-default-excludes</code> to scan everything, and <code>-v/--verbose</code> to see
+    what is being scanned.</p>
+  </section>
+
+  <!-- CONFIG -->
+  <section id="config">
+    <h2><span class="icon">📄</span> Configuration</h2>
+    <p><code>appsettings.json</code> keeps the .NET section names (<code>Toggles</code>,
+    <code>TogglesOverrides</code>, <code>FtrIO</code>) for cross-language and wire compatibility — the
+    HTTP provider returns this exact shape.</p>
+    <pre><code><span class="pu">{</span>
+    <span class="st">"FtrIO"</span>: <span class="pu">{</span>
+        <span class="st">"ReloadOnChange"</span>: <span class="kw">true</span>,            <span class="cm">// re-read on each lookup; live edits apply</span>
+        <span class="st">"FlushInterval"</span>: <span class="nm">5</span>,
+        <span class="st">"Environment"</span>: <span class="st">"Production"</span>,        <span class="cm">// overlays appsettings.Production.json</span>
+        <span class="st">"BlueGreen"</span>: <span class="pu">{</span> <span class="st">"CurrentSlot"</span>: <span class="st">"blue"</span>, <span class="st">"KnownSlots"</span>: <span class="st">"blue,green"</span> <span class="pu">}</span>
+    <span class="pu">}</span>
+<span class="pu">}</span></code></pre>
+    <p>The active environment resolves from <code>FtrIO:Environment</code>, then
+    <code>ASPNETCORE_ENVIRONMENT</code>, then <code>DOTNET_ENVIRONMENT</code> (with
+    <code>FTRIO_ENVIRONMENT</code> as an additive Python-native alias).</p>
+
+    <h3>Supported Python versions</h3>
+    <div class="tfm-row">
+      <span class="tfm-badge">3.9</span>
+      <span class="tfm-badge">3.10</span>
+      <span class="tfm-badge">3.11</span>
+      <span class="tfm-badge">3.12</span>
+      <span class="tfm-badge">3.13</span>
+    </div>
+    <p style="margin-top:0.75rem;font-size:0.85rem;">See the
+    <a href="https://pypi.org/project/ftrio/">PyPI page</a> for the authoritative supported range.</p>
+  </section>
+
+  <!-- PLAYGROUND -->
+  <section>
+    <h2><span class="icon">🎮</span> Playground</h2>
+    <p>Run the bundled playground to watch toggles flip live:</p>
+    <pre><code><span class="pu">$</span> python -m playground</code></pre>
+    <p>It cycles four users every two seconds and prints each toggle's ON/OFF state, honouring live
+    edits to <code>playground/appsettings.json</code>.</p>
+  </section>
+
+</main>
+
+<footer>
+  <p>
+    Built by <a href="https://github.com/TheScottBot">TheScottBot</a> &nbsp;·&nbsp;
+    <a href="https://github.com/FtrOnOff/ftrio-python">GitHub</a> &nbsp;·&nbsp;
+    <a href="https://pypi.org/project/ftrio/">PyPI</a> &nbsp;·&nbsp;
+    <a href="https://docs.ftrio.dev">.NET docs</a> &nbsp;·&nbsp;
+    <a href="https://github.com/FtrOnOff/ftrio-python/blob/main/LICENSE">MIT License</a>
+  </p>
+</footer>
+
+<script>
+  function copyInstall(btn) {
+    navigator.clipboard.writeText('pip install ftrio').then(() => {
+      btn.textContent = 'copied!';
+      setTimeout(() => { btn.textContent = 'copy'; }, 1800);
+    });
+  }
+</script>
+</body>
+</html>
