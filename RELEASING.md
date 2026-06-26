@@ -30,6 +30,24 @@ Notes:
   organization (once approved) or publish under a personal account and transfer
   the project to the organization afterwards.
 
+### Branch and tag protection
+
+Two rulesets (Settings -> Rules -> Rulesets) protect the release path. Add
+**Repository admin** to each ruleset's bypass list so a solo maintainer keeps an
+escape hatch and can still create release tags.
+
+- **`protect-main`** (branch ruleset, targets the default branch): require the CI
+  status checks (`test (3.11)`, `test (3.12)`, `test (3.13)`) to pass and be up to
+  date, require a pull request (0 approvals for a solo maintainer), block force
+  pushes, and restrict deletions.
+- **`protect-release-tags`** (tag ruleset, targets `v*`): restrict updates and
+  deletions so a published release tag can never be moved or removed, and
+  optionally restrict creations to maintainers.
+
+These are independent of, and complementary to, the `pypi` environment's `v*`
+deployment rule: the rulesets govern who can change branches and tags, the
+environment rule governs which tags may publish.
+
 ## Cutting a release (checklist)
 
 1. **Confirm `main` is green.** The CI workflow must pass (ruff, mypy, pytest).
