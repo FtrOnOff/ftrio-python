@@ -10,7 +10,24 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "FtrIO contributors" }]
-keywords = ["feature-flags", "feature-toggles", "ab-testing", "rollout"]
+# Kept in sync with the GitHub repository topics.
+keywords = [
+    "python",
+    "decorators",
+    "python-library",
+    "feature-flags",
+    "feature-toggles",
+    "experimentation",
+    "ab-testing",
+    "rollout",
+    "feature-toggle",
+    "blue-green-deployment",
+    "feature-flag",
+    "progressive-delivery",
+    "feature-management",
+    "ftrio",
+    "dotnet-port",
+]
 classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
