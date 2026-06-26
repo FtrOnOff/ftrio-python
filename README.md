@@ -8,6 +8,22 @@ targeting, per-user overrides, are layered in through a strategy chain.
 
 The core depends on the standard library only.
 
+## Installation
+
+```console
+pip install ftrio
+```
+
+The core has no third-party dependencies. The Azure App Configuration provider
+needs an optional extra:
+
+```console
+pip install "ftrio[azure]"
+```
+
+(Contributors working on FtrIO itself want the editable dev install instead; see
+[Development](#development).)
+
 ## Quickstart
 
 1. Decorate a method. The toggle key defaults to the method's own name.
@@ -164,3 +180,9 @@ $ mypy ftrio
 
 See [PORTING_NOTES.md](PORTING_NOTES.md) for every deviation from a literal 1:1
 port of the .NET source.
+
+## Releasing and changelog
+
+Releases are published to PyPI from a GitHub Release via Trusted Publishing; the
+step-by-step checklist is in [RELEASING.md](RELEASING.md). Notable changes are
+recorded in [CHANGELOG.md](CHANGELOG.md).
