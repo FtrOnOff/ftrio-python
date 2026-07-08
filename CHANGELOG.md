@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-07-08
+
+A patch release completing case-insensitive key handling across every
+configuration source, so keys resolve the same on every platform.
+
+### Fixed
+
+- **Config keys are now matched case-insensitively.**
+  `AppSettingsConfiguration.get_value` resolves colon-path keys regardless of
+  case (e.g. `Toggles:newcheckout` finds `Toggles:NewCheckout`), mirroring
+  `Microsoft.Extensions.Configuration`'s `OrdinalIgnoreCase` comparer. An exact
+  match is still preferred as a fast path.
+- **Environment-variable buffer mode now works on Windows.**
+  `EnvironmentVariableToggleParser` matched its prefix case-sensitively, but
+  Windows uppercases env-var names at the OS boundary
+  (`FTRIO__Toggles__BufA` becomes `FTRIO__TOGGLES__BUFA`), so buffer mode staged
+  nothing there. The prefix is now matched case-insensitively; the extracted key
+  keeps the OS-provided case, which is harmless because toggle keys are compared
+  case-insensitively throughout. Standalone mode was already correct and is
+  unchanged.
+
+### Internal
+
+- Added a hidden `conformance-resolve` CLI command (help suppressed, not
+  user-facing) that reads one resolution case as JSON on stdin and prints the
+  outcome as JSON, letting the cross-language `ftrio-conformance` matrix exercise
+  the port's real resolution logic.
+
+### Notes
+
+No API or behavioural changes for correctly-cased keys; existing configurations
+continue to work unchanged. This is the environment/OS counterpart to the
+JSON-side config fix, making key handling consistently case-insensitive across
+every source on every platform.
+
 ## [1.0.0] - 2026-06-26
 
 Initial release: a faithful Python port of the .NET
@@ -55,5 +90,6 @@ method-naming convention (snake_case keys derived from snake_case method names),
 and exception classes use the Python-canonical `*Error` suffix. See
 [PORTING_NOTES.md](PORTING_NOTES.md) for every deviation from a literal 1:1 port.
 
-[Unreleased]: https://github.com/FtrOnOff/ftrio-python/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/FtrOnOff/ftrio-python/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/FtrOnOff/ftrio-python/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/FtrOnOff/ftrio-python/releases/tag/v1.0.0
