@@ -192,8 +192,25 @@ class AppSettingsConfiguration:
         return self._cached_view
 
     def get_value(self, colon_key: str) -> str | None:
-        """Return the value at a colon-delimited key, or ``None`` if absent."""
-        return self._current_view().get(colon_key)
+        """Return the value at a colon-delimited key, or ``None`` if absent.
+
+        Keys are matched case-insensitively, mirroring
+        ``Microsoft.Extensions.Configuration`` whose ``ConfigurationKeyComparer`` is
+        ``OrdinalIgnoreCase``. This is the cross-language conformance contract (see the
+        ftrio-conformance suite, resolution case ``boolean_key_case_insensitive_match``):
+        a lookup of ``Toggles:newcheckout`` resolves a config key ``Toggles:NewCheckout``.
+        An exact match is preferred first as a fast path; only on a miss do we scan for a
+        case-insensitive match.
+        """
+        view = self._current_view()
+        exact = view.get(colon_key)
+        if exact is not None:
+            return exact
+        lowered_key = colon_key.lower()
+        for candidate_key, candidate_value in view.items():
+            if candidate_key.lower() == lowered_key:
+                return candidate_value
+        return None
 
 
 def _read_json_file_or_empty(file_path: Path) -> dict[str, Any]:

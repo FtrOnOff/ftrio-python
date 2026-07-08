@@ -255,6 +255,75 @@ def _resolve_exclude_patterns(
     return tuple(patterns)
 
 
+def _conformance_resolve() -> int:
+    """Read one conformance resolution case as JSON on stdin, print the outcome as JSON.
+
+    The counterpart of the Rust CLI's ``conformance-resolve``: it lets the language-agnostic driver
+    exercise the port's real resolution logic across languages. Output is ``{"result": true}`` /
+    ``{"result": false}`` for a decision, or ``{"error": "DoesNotExist"}`` (etc.) for a named error.
+    """
+    import os
+    import tempfile
+
+    from .builder import ToggleParserBuilder
+    from .context import FtrIOContextAccessor
+    from .exceptions import (
+        ToggleAttributeMissingError,
+        ToggleDoesNotExistError,
+        ToggleParsedOutOfRangeError,
+    )
+
+    class _CaseContext(FtrIOContextAccessor):
+        def __init__(self, user_id, attributes):
+            self._user_id = user_id
+            self._attributes = attributes or {}
+
+        def get_user_id(self):
+            return self._user_id
+
+        def get_attribute(self, attribute_name):
+            return self._attributes.get(attribute_name)
+
+    try:
+        case = json.loads(sys.stdin.read())
+    except json.JSONDecodeError as error:
+        print(f"conformance-resolve: invalid JSON on stdin: {error}", file=sys.stderr)
+        return 2
+
+    context = case.get("context") or {}
+    accessor = _CaseContext(context.get("userId"), context.get("attributes"))
+
+    previous_cwd = os.getcwd()
+    with tempfile.TemporaryDirectory(prefix="ftrio_cr_") as directory:
+        if case.get("config") is not None:
+            (Path(directory) / "appsettings.json").write_text(
+                json.dumps(case["config"], indent=2), encoding="utf-8"
+            )
+        os.chdir(directory)
+        try:
+            parser = (
+                ToggleParserBuilder()
+                .with_percentage_rollout()
+                .with_blue_green()
+                .with_context_strategies(accessor)
+                .with_overrides()
+                .build()
+            )
+            try:
+                outcome = {"result": parser.get_toggle_status(case["toggleKey"])}
+            except ToggleDoesNotExistError:
+                outcome = {"error": "DoesNotExist"}
+            except ToggleParsedOutOfRangeError:
+                outcome = {"error": "ParsedOutOfRange"}
+            except ToggleAttributeMissingError:
+                outcome = {"error": "AttributeMissing"}
+        finally:
+            os.chdir(previous_cwd)
+
+    print(json.dumps(outcome))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point. Returns a non-zero exit code when findings exist."""
     parser = argparse.ArgumentParser(
@@ -297,7 +366,17 @@ def main(argv: list[str] | None = None) -> int:
         help="Emit FtrIO debug logging (to stderr) describing what is being scanned.",
     )
 
+    # Hidden hook for the ftrio-conformance cross-port matrix driver: read one resolution case as
+    # JSON on stdin, print the outcome as JSON on stdout. Not a user-facing command.
+    subparsers.add_parser(
+        "conformance-resolve",
+        help=argparse.SUPPRESS,
+    )
+
     arguments = parser.parse_args(argv)
+
+    if arguments.command == "conformance-resolve":
+        return _conformance_resolve()
 
     # Verbosity is managed through the logging module: -v turns on debug output
     # for the whole FtrIO logger tree, which the operator can further redirect to
