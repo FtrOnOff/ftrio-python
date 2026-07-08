@@ -59,11 +59,21 @@ class EnvironmentVariableToggleParser(ToggleParser):
         raise ToggleParsedOutOfRangeError()
 
     def _push_snapshot(self) -> None:
-        """Stage every env var under the prefix to the buffer (buffer mode)."""
+        """Stage every env var under the prefix to the buffer (buffer mode).
+
+        The prefix is matched case-insensitively because some platforms (notably
+        Windows) normalise environment variable names to uppercase, so a
+        case-sensitive match would stage nothing there. The extracted toggle key
+        is left in whatever case the OS provides; this is harmless because toggle
+        keys are matched case-insensitively throughout FtrIO.
+        """
         assert self._buffer is not None  # only called when in buffer mode
+        lowered_prefix = self._prefix.lower()
         for environment_key, value in os.environ.items():
-            if not environment_key.startswith(self._prefix):
+            if not environment_key.lower().startswith(lowered_prefix):
                 continue
+            # Slice by the real prefix length; the matched prefix is the same
+            # length as self._prefix regardless of case.
             toggle_key = environment_key[len(self._prefix):]
             self._buffer.stage(toggle_key, value if value is not None else "")
 

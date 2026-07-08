@@ -95,8 +95,11 @@ def test_env_var_buffer_mode_stages_all_matching_env_vars(clean_env_var):
     clean_env_var("FTRIO__Toggles__BufB", "false")
     spy = _SpyToggleBuffer()
     with EnvironmentVariableToggleParser(buffer=spy):
-        assert spy.staged["BufA"] == "true"
-        assert spy.staged["BufB"] == "false"
+        # Assert case-insensitively: Windows uppercases env-var names at the OS
+        # boundary, so the staged key is BUFA/BUFB there and BufA/BufB on Linux.
+        staged_case_insensitive = {key.lower(): value for key, value in spy.staged.items()}
+        assert staged_case_insensitive["bufa"] == "true"
+        assert staged_case_insensitive["bufb"] == "false"
 
 
 def test_env_var_buffer_mode_does_not_stage_unrelated_env_vars(clean_env_var):
@@ -104,8 +107,12 @@ def test_env_var_buffer_mode_does_not_stage_unrelated_env_vars(clean_env_var):
     clean_env_var("OTHER_PREFIX_Key", "true")
     spy = _SpyToggleBuffer()
     with EnvironmentVariableToggleParser(buffer=spy):
-        assert "Relevant" in spy.staged
-        assert "OTHER_PREFIX_Key" not in spy.staged
+        # Case-insensitive: the OS may uppercase the staged key on Windows.
+        staged_case_insensitive = {key.lower(): value for key, value in spy.staged.items()}
+        assert "relevant" in staged_case_insensitive
+        # The unrelated OTHER_PREFIX_Key does not start with the prefix under any
+        # casing, so it derives no matching key and must be absent.
+        assert "other_prefix_key" not in staged_case_insensitive
 
 
 # ── CompositeToggleParser ────────────────────────────────────────────────────
