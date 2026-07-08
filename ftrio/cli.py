@@ -309,6 +309,9 @@ def _conformance_resolve() -> int:
                 .with_overrides()
                 .build()
             )
+            # Either a boolean decision or a named error string, so the values are
+            # heterogeneous; type it explicitly rather than let the first branch narrow it.
+            outcome: dict[str, bool | str]
             try:
                 outcome = {"result": parser.get_toggle_status(case["toggleKey"])}
             except ToggleDoesNotExistError:
